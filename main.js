@@ -1,60 +1,75 @@
-const electron = require('electron')
-// Module to control application life.
-const app = electron.app
-// Module to create native browser window.
-const BrowserWindow = electron.BrowserWindow
+let { app, Tray, Menu, BrowserWindow, globalShortcut } = require('electron');
+let path = require('path');
+let fs = require('fs');
+let exec = require('child_process').exec;
+let homedir = require('os').homedir();
 
-const path = require('path')
-const url = require('url')
+let appIcon = null;
+let win = null;
+let tray = null;
+let noHotkeysFound = [
+  {
+    label: 'Load shortcuts at ~/.hotkeysrc'
+  }
+];
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow
+let iconPath = () =>  path.join(__dirname, 'images', `icon-Template.png`);
 
-function createWindow () {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({width: 800, height: 600})
+let contextMenu = (hotkeys) => {
+  return Menu.buildFromTemplate([
+    ...(hotkeys || noHotkeysFound),
+    {
+      type: 'separator'
+    },
+    {
+      label: 'quit',
+      accelerator: 'Command+q',
+      selector: 'terminate:'
+    }
+  ]);
+};
 
-  // and load the index.html of the app.
-  mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'index.html'),
-    protocol: 'file:',
-    slashes: true
-  }))
-
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
-
-  // Emitted when the window is closed.
-  mainWindow.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    mainWindow = null
-  })
+let reloadApp = (params = {}) => {
+  console.log('reload app');
+  win = win || new BrowserWindow({ show: false });
+  tray = tray || new Tray(iconPath());
+  tray.setToolTip('hotkeysrc');
+  tray.setContextMenu(contextMenu(params.hotkeys));
+  tray.setImage(iconPath());
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
+let setupHotKeys = (hotkeys) => {
+  let menuItems = hotkeys.map((hotkey) => {
+    // side effect, setup shortcut
+    globalShortcut.register(hotkey.shortcut, () => {
+      hotkey.apps.forEach((app) => {
+        console.log(`Running \`open ${app}\``);
+        exec(`open "${app}"`);
+      });
+    });
 
-// Quit when all windows are closed.
-app.on('window-all-closed', function () {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+    return {
+      label: hotkey.apps.map(a => a.split('/').slice(-1)).join(' ,'),
+      accelerator: hotkey.shortcut
+    }
+  });
 
-app.on('activate', function () {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createWindow()
-  }
-})
+  hotkeys = menuItems;
+  reloadApp({hotkeys});
+}
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+app.on('ready', () => {
+  // app.dock.hide();
+
+  fs.readFile(path.join(homedir, '.hotkeysrc'), 'utf8', function (err, data) {
+    if (err) {
+      console.log('Please include your hotkeys at ~/.hotkeysrc');
+    }
+
+    setupHotKeys(JSON.parse(data));
+  });
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+});

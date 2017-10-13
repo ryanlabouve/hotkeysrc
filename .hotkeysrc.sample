@@ -1,0 +1,16 @@
+[
+  {
+    "apps": [
+      "/Applications/Tweetbot.app",
+      "/Applications/Airmail 2.app"
+    ],
+    "shortcut": "CommandOrControl+j"
+  },
+  {
+    "apps": [
+      "/Applications/iTerm.app"
+    ],
+    "shortcut": "CommandOrControl+Shift+j"
+  }
+]
+
