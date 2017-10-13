@@ -59,7 +59,7 @@ let setupHotKeys = (hotkeys) => {
 }
 
 app.on('ready', () => {
-  // app.dock.hide();
+  app.dock.hide();
 
   fs.readFile(path.join(homedir, '.hotkeysrc'), 'utf8', function (err, data) {
     if (err) {
