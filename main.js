@@ -24,7 +24,7 @@ let contextMenu = (hotkeys) => {
     {
       label: 'quit',
       accelerator: 'Command+q',
-      selector: 'terminate:'
+      role: 'quit'
     }
   ]);
 };
